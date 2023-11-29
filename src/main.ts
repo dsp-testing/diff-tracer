@@ -31,7 +31,9 @@ async function shouldSkip(): Promise<boolean> {
     { lookupOnly: false },
     false
   )
-  if (!cacheKey) {
+  if (cacheKey) {
+    core.info(`Cache restored with key: ${cacheKey}`)
+  } else {
     core.info(
       `Cache not found for input keys: ${[primaryKey, ...restoreKeys].join(
         ', '
