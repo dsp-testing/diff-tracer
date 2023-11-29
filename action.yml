@@ -1,24 +1,17 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
-
-# Add your action's branding here. This will appear on the GitHub Marketplace.
-branding:
-  icon: 'heart'
-  color: 'red'
+name: 'Diff tracer'
+description: 'Diff tracer'
+author: 'Diff tracer team'
 
 # Define your inputs here.
-inputs:
-  milliseconds:
-    description: 'Your input description here'
-    required: true
-    default: '1000'
+inputs: {}
 
 # Define your outputs here.
 outputs:
-  time:
-    description: 'Your output description here'
+  skip:
+    description: 'Whether the remainder of the job can be skipped'
 
 runs:
   using: node20
   main: dist/index.js
+  post: dist/index.js
+  post-if: success()
