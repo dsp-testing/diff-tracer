@@ -21,7 +21,7 @@ async function shouldSkip(): Promise<boolean> {
   }
 
   const cachePaths: string[] = ['filelist.txt']
-  const primaryKey: string = `${workflow}-${branch}-${commit}`
+  const primaryKey = `${workflow}-${branch}-${commit}`
   const restoreKeys: string[] = [`${workflow}-${branch}-`]
 
   const cacheKey = await cache.restoreCache(
@@ -39,17 +39,17 @@ async function shouldSkip(): Promise<boolean> {
     )
     return false
   }
-  let previousCommit = cacheKey.split('-').pop()
+  const previousCommit = cacheKey.split('-').pop()
   if (!previousCommit) {
     core.warning(`Malformed cache key: ${cacheKey}`)
     return false
   }
 
-  let changedFiles = await getChangedFiles(previousCommit, commit)
-  let usedFiles = new Set(
+  const changedFiles = await getChangedFiles(previousCommit, commit)
+  const usedFiles = new Set(
     fs.readFileSync('filelist.txt').toString().split('\n')
   )
-  for (let file of changedFiles) {
+  for (const file of changedFiles) {
     if (usedFiles.has(file)) {
       return false
     }
@@ -88,9 +88,9 @@ async function getChangedFiles(
     base,
     head
   })
-  let changedFiles = new Set<string>()
+  const changedFiles = new Set<string>()
   if (data.files) {
-    for (let file of data.files) {
+    for (const file of data.files) {
       changedFiles.add(file.filename)
     }
   }
@@ -104,13 +104,13 @@ export async function finish(): Promise<void> {
     const workflow = process.env['GITHUB_WORKFLOW']
 
     const cachePaths: string[] = ['filelist.txt']
-    const primaryKey: string = `${workflow}-${branch}-${commit}`
+    const primaryKey = `${workflow}-${branch}-${commit}`
 
     //TODO: end tracing and collect paths in filelist.txt
 
     const cacheId = await cache.saveCache(cachePaths, primaryKey, {}, false)
 
-    if (cacheId != -1) {
+    if (cacheId !== -1) {
       core.info(`Cache saved with key: ${primaryKey}`)
     }
   } catch (error) {
