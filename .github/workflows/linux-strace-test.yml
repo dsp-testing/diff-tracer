@@ -1,0 +1,23 @@
+name: Linux strace test
+
+on:
+  push:
+    branches:
+      - fossjunkie/linux-strace
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-strace-test:
+    name: Linux strace test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Find PID of runner service
+        run: ps aux | grep "actions.runner.*Runner.Listener"
