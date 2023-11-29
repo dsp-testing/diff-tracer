@@ -18,6 +18,38 @@ jobs:
       - name: Checkout
         id: checkout
         uses: actions/checkout@v4
-
-      - name: Find PID of runner service
-        run: ps aux | grep "actions.runner.*Runner.Listener"
+      - name: Find the PID of the runner worker service
+        id: runner-pid
+        run: |
+          RUNNER_PID=$(ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1)
+          echo "Runner PID: $RUNNER_PID"
+          echo "runnerPid=$RUNNER_PID" >> $GITHUB_OUTPUT
+      - name: Attach tracer to runner service
+        env:
+          RUNNER_PID: ${{ steps.runner-pid.outputs.runnerPid }}
+        run: |
+          echo "Runner PID: $RUNNER_PID"
+          exec nohup sudo strace -f -e trace=open,openat -o ./tracer.log -p $RUNNER_PID &
+      - name: Run tests
+        run: |
+          mkdir -p /tmp/test
+          echo "Running tests"                                                                                                                         
+          echo "test" > /tmp/test/test1.txt                                                                                               
+          echo "test" > /tmp/test/test2.txt                                                                                               
+          echo "test" > /tmp/test/test3.txt                                                                                               
+          echo "test" > /tmp/test/test4.txt                                                                                               
+          echo "test" > /tmp/test/test5.txt                                                                                               
+          echo "test" > /tmp/test/test6.txt                                                                                               
+          cat /tmp/test/test1.txt                                                                                                                   
+          cat /tmp/test/test2.txt                                                                                                                   
+          cat /tmp/test/test3.txt                                                                                                                   
+          cat /tmp/test/test4.txt                                                                                                                   
+          cat /tmp/test/test5.txt                                                                                                                   
+          cat /tmp/test/test6.txt
+      - name: PID tracer results
+        run: |
+          echo "Tracer results:"
+          ls -la ./tracer.log
+          sudo cat ./tracer.log | grep '/tmp/test' | grep 'openat' | cut -d "\"" -f2 | sort -u
+          
+          
