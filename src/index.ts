@@ -9,4 +9,3 @@ if (!core.getState('isPost')) {
 } else {
   finish()
 }
-
