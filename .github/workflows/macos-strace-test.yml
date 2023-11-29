@@ -29,7 +29,7 @@ jobs:
           RUNNER_PID: ${{ steps.runner-pid.outputs.runnerPid }}
         run: |
           echo "Runner PID: $RUNNER_PID"
-          exec fs_usage pid $RUNNER_PID > ./tracer.log &
+          exec sudo fs_usage pid $RUNNER_PID > ./tracer.log &
       - name: Run tests
         run: |
           mkdir -p /tmp/test
