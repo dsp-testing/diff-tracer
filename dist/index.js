@@ -84350,7 +84350,51 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = void 0;
+/**
+ * The entrypoint for the action.
+ */
+const main_1 = __nccwpck_require__(399);
+const core = __importStar(__nccwpck_require__(2186));
+if (!core.getState('isPost')) {
+    (0, main_1.run)();
+}
+else {
+    (0, main_1.finish)();
+}
+
+
+/***/ }),
+
+/***/ 399:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.finish = exports.run = void 0;
 const cache = __importStar(__nccwpck_require__(7799));
 const core = __importStar(__nccwpck_require__(2186));
 const fs = __importStar(__nccwpck_require__(7147));
@@ -84379,14 +84423,14 @@ async function shouldSkip() {
         core.info(`Cache not found for input keys: ${[primaryKey, ...restoreKeys].join(', ')}`);
         return false;
     }
-    let previousCommit = cacheKey.split('-').pop();
+    const previousCommit = cacheKey.split('-').pop();
     if (!previousCommit) {
         core.warning(`Malformed cache key: ${cacheKey}`);
         return false;
     }
-    let changedFiles = await getChangedFiles(previousCommit, commit);
-    let usedFiles = new Set(fs.readFileSync('filelist.txt').toString().split('\n'));
-    for (let file of changedFiles) {
+    const changedFiles = await getChangedFiles(previousCommit, commit);
+    const usedFiles = new Set(fs.readFileSync('filelist.txt').toString().split('\n'));
+    for (const file of changedFiles) {
         if (usedFiles.has(file)) {
             return false;
         }
@@ -84424,9 +84468,9 @@ async function getChangedFiles(base, head) {
         base,
         head
     });
-    let changedFiles = new Set();
+    const changedFiles = new Set();
     if (data.files) {
-        for (let file of data.files) {
+        for (const file of data.files) {
             changedFiles.add(file.filename);
         }
     }
@@ -84441,7 +84485,7 @@ async function finish() {
         const primaryKey = `${workflow}-${branch}-${commit}`;
         //TODO: end tracing and collect paths in filelist.txt
         const cacheId = await cache.saveCache(cachePaths, primaryKey, {}, false);
-        if (cacheId != -1) {
+        if (cacheId !== -1) {
             core.info(`Cache saved with key: ${primaryKey}`);
         }
     }
@@ -84451,12 +84495,7 @@ async function finish() {
             core.setFailed(error.message);
     }
 }
-if (!core.getState('isPost')) {
-    run();
-}
-else {
-    finish();
-}
+exports.finish = finish;
 
 
 /***/ }),
