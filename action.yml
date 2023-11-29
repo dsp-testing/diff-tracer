@@ -15,7 +15,7 @@ runs:
   # main: dist/index.js
   # post: dist/index.js
   # post-if: success()
-using: "composite"
+  using: "composite"
   steps:
     - name: Get the worker process PID
       id: runner-pid
