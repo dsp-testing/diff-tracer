@@ -15,3 +15,18 @@ runs:
   main: dist/index.js
   post: dist/index.js
   post-if: success()
+
+steps:
+  - name: Get the worker process PID
+    id: runner-pid
+    run: |
+      WORKER_PID="$(ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1)"
+      echo "Runner PID: $WORKER_PID"
+      echo "runnerPid=$WORKER_PID" >> $GITHUB_OUTPUT
+  - name: Linux | Attach strace to worker process
+    if: runner.os == 'Linux'
+    env:
+      WORKER_PID: ${{ steps.runner-pid.outputs.runnerPid }}
+    run: |
+      echo "Runner PID: $WORKER_PID"
+      exec nohup sudo strace -f -e trace=open,openat -o ./tracer.log -p $WORKER_PID &
