@@ -21,7 +21,7 @@ jobs:
       - name: Find the PID of the runner worker service
         id: runner-pid
         run: |
-          RUNNER_PID=$(ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1)
+          RUNNER_PID="$(ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1)"
           echo "Runner PID: $RUNNER_PID"
           echo "runnerPid=$RUNNER_PID" >> $GITHUB_OUTPUT
       - name: Attach tracer to runner service
@@ -50,6 +50,6 @@ jobs:
         run: |
           echo "Tracer results:"
           ls -la ./tracer.log
-          sudo cat ./tracer.log | grep '/tmp/test' | grep 'openat' | cut -d "\"" -f2 | sort -u
+          sudo cat ./tracer.log | grep '/tmp/test' | grep 'open' | cut -d "\"" -f2 | sort -u
           
           
