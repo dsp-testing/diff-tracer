@@ -84360,7 +84360,7 @@ if (!core.getState('isPost')) {
     void (0, main_1.run)();
 }
 else {
-    void (0, main_1.finish)();
+    void (0, main_1.finish)().then(() => process.exit(0));
 }
 
 

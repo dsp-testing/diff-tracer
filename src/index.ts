@@ -8,5 +8,5 @@ if (!core.getState('isPost')) {
   core.saveState('isPost', 'true')
   void run()
 } else {
-  void finish()
+  void finish().then(() => process.exit(0))
 }
