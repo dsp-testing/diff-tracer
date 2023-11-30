@@ -117,17 +117,17 @@ export async function finish(): Promise<void> {
     //TODO: end tracing and collect paths in filelist.txt
 
     //TODO: Until we have tracing wired up, the used files are hard-coded.
-    const filelist = fs.createWriteStream('filelist.txt')
+    let filesUsed = ""
     if (fs.existsSync('main.rb')) {
-      filelist.write('main.rb\n')
+      filesUsed += 'main.rb\n'
     }
     if (fs.existsSync('Gemfile')) {
-      filelist.write('Gemfile\n')
+      filesUsed += 'Gemfile\n'
     }
     if (fs.existsSync('Gemfile.lock')) {
-      filelist.write('Gemfile.lock\n')
+      filesUsed += 'Gemfile.lock\n'
     }
-    filelist.end()
+    fs.writeFileSync('filelist.txt', filesUsed)
 
     const cacheId = await cache.saveCache(cachePaths, primaryKey, {}, false)
 
