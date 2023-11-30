@@ -1,12 +1,6 @@
 /**
  * The entrypoint for the action.
  */
-import { run, finish } from './main'
-import * as core from '@actions/core'
+import { main } from './main'
 
-if (!core.getState('isPost')) {
-  core.saveState('isPost', 'true')
-  void run()
-} else {
-  void finish().then(() => process.exit(0))
-}
+main()

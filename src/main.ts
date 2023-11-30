@@ -64,7 +64,7 @@ async function shouldSkip(): Promise<boolean> {
   return true
 }
 
-export async function run(): Promise<void> {
+async function run(): Promise<void> {
   try {
     const skip = await shouldSkip()
     core.setOutput('skip', skip.toString())
@@ -72,7 +72,7 @@ export async function run(): Promise<void> {
       core.info('Skipping workflow run')
     } else {
       core.info('Running workflow')
-      let workerPid = process.ppid
+      const workerPid = process.ppid
       // WORKER_PID="$(ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1)"
       //  let workerPid = child_process.execSync(`ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1`, { stdio: 'inherit' }).toString;
       core.info(`Runner PID: ${workerPid}`)
@@ -128,7 +128,7 @@ async function getChangedFiles(
   return [changedFiles, !!added]
 }
 
-export async function finish(): Promise<void> {
+async function finish(): Promise<void> {
   try {
     const tracerPid = core.getState('tracerPid')
     if (tracerPid) {
@@ -149,13 +149,13 @@ export async function finish(): Promise<void> {
     }
     core.info(`Trace log:\n${traceLogContents}`)
     let filesUsed = ''
-    traceLogContents.split('\n').forEach(line => {
+    for (const line of traceLogContents.split('\n')) {
       if (line.includes(process.cwd())) {
         const file = line.split('"')[1]
         core.info(`File used: ${file}`)
         filesUsed += `${file}\n`
       }
-    })
+    }
 
     fs.writeFileSync('filelist.txt', filesUsed)
     core.info(`Files used: ${filesUsed}`)
@@ -173,7 +173,16 @@ export async function finish(): Promise<void> {
       core.info(`Cache saved with key: ${primaryKey}`)
     }
   } catch (error) {
-    // Fail the workflow run if an error occurs
-    if (error instanceof Error) core.setFailed(error.message)
+    if (error instanceof Error) core.warning(error)
+  }
+}
+
+export async function main(): Promise<void> {
+  if (!core.getState('isPost')) {
+    core.saveState('isPost', 'true')
+    await run()
+  } else {
+    await finish()
+    process.exit(0)
   }
 }
