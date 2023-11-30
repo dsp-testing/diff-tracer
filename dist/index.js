@@ -84410,9 +84410,11 @@ async function run() {
         }
         else {
             core.info('Running workflow');
-            const workerPid = process.ppid;
             // WORKER_PID="$(ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1)"
-            //  let workerPid = child_process.execSync(`ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1`, { stdio: 'inherit' }).toString;
+            const workerPid = child_process
+                .execSync(`ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1`)
+                .toString()
+                .trim();
             core.info(`Runner PID: ${workerPid}`);
             fs.closeSync(fs.openSync(TRACER_LOG_FILE, 'w'));
             const p = child_process.spawn('/usr/bin/nohup', [
