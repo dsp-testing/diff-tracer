@@ -48,7 +48,7 @@ def main():
                 # We don't care about duplicate events.
                 continue
             files_seen.add(fullname)
-            print(fullname)
+            print(fullname, flush=True)
 
 if __name__ == '__main__':
     main()
