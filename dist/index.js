@@ -84356,6 +84356,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const main_1 = __nccwpck_require__(399);
 const core = __importStar(__nccwpck_require__(2186));
 if (!core.getState('isPost')) {
+    core.saveState('isPost', 'true');
     (0, main_1.run)();
 }
 else {
