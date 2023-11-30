@@ -31,7 +31,9 @@ async function shouldSkip(): Promise<boolean> {
     { lookupOnly: false },
     false
   )
-  if (!cacheKey) {
+  if (cacheKey) {
+    core.info(`Cache restored with key: ${cacheKey}`)
+  } else {
     core.info(
       `Cache not found for input keys: ${[primaryKey, ...restoreKeys].join(
         ', '
@@ -113,6 +115,19 @@ export async function finish(): Promise<void> {
     const primaryKey = `${workflow}-${branch}-${commit}`
 
     //TODO: end tracing and collect paths in filelist.txt
+
+    //TODO: Until we have tracing wired up, the used files are hard-coded.
+    const filelist = fs.createWriteStream('filelist.txt')
+    if (fs.existsSync('main.rb')) {
+      filelist.write('main.rb\n')
+    }
+    if (fs.existsSync('Gemfile')) {
+      filelist.write('Gemfile\n')
+    }
+    if (fs.existsSync('Gemfile.lock')) {
+      filelist.write('Gemfile.lock\n')
+    }
+    filelist.end()
 
     const cacheId = await cache.saveCache(cachePaths, primaryKey, {}, false)
 

@@ -84356,6 +84356,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const main_1 = __nccwpck_require__(399);
 const core = __importStar(__nccwpck_require__(2186));
 if (!core.getState('isPost')) {
+    core.saveState('isPost', 'true');
     (0, main_1.run)();
 }
 else {
@@ -84419,7 +84420,10 @@ async function shouldSkip() {
     const primaryKey = `${workflow}-${branch}-${commit}`;
     const restoreKeys = [`${workflow}-${branch}-`];
     const cacheKey = await cache.restoreCache(cachePaths, primaryKey, restoreKeys, { lookupOnly: false }, false);
-    if (!cacheKey) {
+    if (cacheKey) {
+        core.info(`Cache restored with key: ${cacheKey}`);
+    }
+    else {
         core.info(`Cache not found for input keys: ${[primaryKey, ...restoreKeys].join(', ')}`);
         return false;
     }
@@ -84490,6 +84494,18 @@ async function finish() {
         const cachePaths = ['filelist.txt'];
         const primaryKey = `${workflow}-${branch}-${commit}`;
         //TODO: end tracing and collect paths in filelist.txt
+        //TODO: Until we have tracing wired up, the used files are hard-coded.
+        const filelist = fs.createWriteStream('filelist.txt');
+        if (fs.existsSync('main.rb')) {
+            filelist.write('main.rb\n');
+        }
+        if (fs.existsSync('Gemfile')) {
+            filelist.write('Gemfile\n');
+        }
+        if (fs.existsSync('Gemfile.lock')) {
+            filelist.write('Gemfile.lock\n');
+        }
+        filelist.end();
         const cacheId = await cache.saveCache(cachePaths, primaryKey, {}, false);
         if (cacheId !== -1) {
             core.info(`Cache saved with key: ${primaryKey}`);
