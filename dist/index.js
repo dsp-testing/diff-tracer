@@ -84361,6 +84361,8 @@ if (!core.getState('isPost')) {
 }
 else {
     (0, main_1.finish)();
+    // For some reason the Node process tends to hang here, so we'll exit the process manually.
+    process.exit(0);
 }
 
 
