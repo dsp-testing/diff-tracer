@@ -84428,7 +84428,10 @@ async function shouldSkip() {
         core.warning(`Malformed cache key: ${cacheKey}`);
         return false;
     }
-    const changedFiles = await getChangedFiles(previousCommit, commit);
+    const [changedFiles, added] = await getChangedFiles(previousCommit, commit);
+    if (added) {
+        return false;
+    }
     const usedFiles = new Set(fs.readFileSync('filelist.txt').toString().split('\n'));
     for (const file of changedFiles) {
         if (usedFiles.has(file)) {
@@ -84456,6 +84459,7 @@ async function run() {
     }
 }
 exports.run = run;
+// Returns a pair of (set of changed files, whether any were added)
 async function getChangedFiles(base, head) {
     // use github rest api to get changed files
     // https://docs.github.com/en/rest/commits/commits#compare-two-commits
@@ -84474,7 +84478,9 @@ async function getChangedFiles(base, head) {
             changedFiles.add(file.filename);
         }
     }
-    return changedFiles;
+    // TODO: should we account for other statuses?
+    const added = data.files?.some(file => file.status === 'added');
+    return [changedFiles, !!added];
 }
 async function finish() {
     try {
