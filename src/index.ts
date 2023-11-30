@@ -5,6 +5,7 @@ import { run, finish } from './main'
 import * as core from '@actions/core'
 
 if (!core.getState('isPost')) {
+  core.saveState('isPost', 'true')
   run()
 } else {
   finish()
