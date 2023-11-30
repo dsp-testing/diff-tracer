@@ -117,7 +117,7 @@ export async function finish(): Promise<void> {
     //TODO: end tracing and collect paths in filelist.txt
 
     //TODO: Until we have tracing wired up, the used files are hard-coded.
-    let filesUsed = ""
+    let filesUsed = ''
     if (fs.existsSync('main.rb')) {
       filesUsed += 'main.rb\n'
     }
