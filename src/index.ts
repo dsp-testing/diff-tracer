@@ -6,10 +6,7 @@ import * as core from '@actions/core'
 
 if (!core.getState('isPost')) {
   core.saveState('isPost', 'true')
-  run()
+  void run()
 } else {
-  finish()
-
-  // For some reason the Node process tends to hang here, so we'll exit the process manually.
-  process.exit(0)
+  void finish()
 }

@@ -84357,12 +84357,10 @@ const main_1 = __nccwpck_require__(399);
 const core = __importStar(__nccwpck_require__(2186));
 if (!core.getState('isPost')) {
     core.saveState('isPost', 'true');
-    (0, main_1.run)();
+    void (0, main_1.run)();
 }
 else {
-    (0, main_1.finish)();
-    // For some reason the Node process tends to hang here, so we'll exit the process manually.
-    process.exit(0);
+    void (0, main_1.finish)();
 }
 
 
