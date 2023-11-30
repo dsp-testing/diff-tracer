@@ -19,12 +19,10 @@ def main():
     # We shouldn't need to add newly directories to the watch list dynamically
     # since we're just interested in what was in the repo at checkout time.
     for path, dirs, files in os.walk(root):
-        for basename in dirs:
-            # Ignore .git directories. TODO: also recursively.
-            if basename == '.git':
-                continue
-            dir = str(os.path.join(path, basename))
-            dirs_to_watch.append(dir)
+        # Ignore .git directories recursively by removing them from the list
+        if '.git' in dirs:
+            dirs.remove('.git')
+        dirs_to_watch.append(path)
     print("Found", len(dirs_to_watch), "directories")
 
     dir_names = {}
