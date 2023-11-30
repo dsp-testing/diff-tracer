@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+
 from inotify_simple import INotify, flags
 
 watch_flags = flags.ACCESS | flags.MODIFY | flags.ATTRIB | flags.OPEN
