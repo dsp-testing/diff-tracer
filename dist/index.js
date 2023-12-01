@@ -84466,7 +84466,7 @@ async function finish() {
         const tracerPid = core.getState('tracerPid');
         if (tracerPid) {
             core.info(`Killing tracer process ${tracerPid}`);
-            child_process.execSync(`sudo kill ${tracerPid}`);
+            child_process.execSync(`sudo kill ${parseInt(tracerPid, 10)}`);
         }
         else {
             core.info('Tracer process not found: skipping');
@@ -84484,7 +84484,9 @@ async function finish() {
         core.info(`Trace log:\n${traceLogContents}`);
         let filesUsed = '';
         for (const line of traceLogContents.split('\n')) {
+            // TODO: deal with relative paths
             if (line.includes(process.cwd())) {
+                // TODO: handle escape sequences
                 const file = line.split('"')[1];
                 core.info(`File used: ${file}`);
                 filesUsed += `${file}\n`;
