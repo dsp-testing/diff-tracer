@@ -2,7 +2,9 @@ import * as cache from '@actions/cache'
 import * as core from '@actions/core'
 import * as fs from 'fs'
 import * as github from '@actions/github'
+import * as child_process from 'child_process'
 
+const TRACER_LOG_FILE = 'tracer.log'
 async function shouldSkip(): Promise<boolean> {
   const commit = process.env['GITHUB_SHA']
   const branch = process.env['GITHUB_REF']
@@ -67,7 +69,7 @@ async function shouldSkip(): Promise<boolean> {
   return true
 }
 
-export async function run(): Promise<void> {
+async function run(): Promise<void> {
   try {
     const skip = await shouldSkip()
     core.setOutput('skip', skip.toString())
@@ -75,7 +77,32 @@ export async function run(): Promise<void> {
       core.info('Skipping workflow run')
     } else {
       core.info('Running workflow')
-      //TODO: setup tracing
+      // WORKER_PID="$(ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1)"
+      const workerPid = child_process
+        .execSync(
+          `ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1`
+        )
+        .toString()
+        .trim()
+      core.info(`Runner PID: ${workerPid}`)
+      fs.closeSync(fs.openSync(TRACER_LOG_FILE, 'w'))
+      const p = child_process.spawn(
+        '/usr/bin/nohup',
+        [
+          'sudo',
+          'strace',
+          '-f',
+          '-e',
+          'trace=open,openat',
+          '-o',
+          TRACER_LOG_FILE,
+          '-p',
+          `${workerPid}`
+        ],
+        { stdio: 'ignore', detached: true }
+      )
+      core.saveState('tracerPid', p.pid)
+      p.unref()
     }
   } catch (error) {
     // Fail the workflow run if an error occurs
@@ -110,8 +137,40 @@ async function getChangedFiles(
   return [changedFiles, !!added]
 }
 
-export async function finish(): Promise<void> {
+async function finish(): Promise<void> {
   try {
+    const tracerPid = core.getState('tracerPid')
+    if (tracerPid) {
+      core.info(`Killing tracer process ${tracerPid}`)
+      child_process.execSync(`sudo kill ${parseInt(tracerPid, 10)}`)
+    } else {
+      core.info('Tracer process not found: skipping')
+      return
+    }
+    // cat./ tracer.log | grep $(pwd) | grep 'open' | cut - d "\"" - f2 | sort - u
+
+    let traceLogContents
+    try {
+      traceLogContents = fs.readFileSync(TRACER_LOG_FILE).toString()
+    } catch (err) {
+      core.info(`File not found: ${TRACER_LOG_FILE}`)
+      return
+    }
+    core.info(`Trace log:\n${traceLogContents}`)
+    let filesUsed = ''
+    for (const line of traceLogContents.split('\n')) {
+      // TODO: deal with relative paths
+      if (line.includes(process.cwd())) {
+        // TODO: handle escape sequences
+        const file = line.split('"')[1]
+        core.info(`File used: ${file}`)
+        filesUsed += `${file}\n`
+      }
+    }
+
+    fs.writeFileSync('filelist.txt', filesUsed)
+    core.info(`Files used: ${filesUsed}`)
+
     const commit = process.env['GITHUB_SHA']
     const branch = process.env['GITHUB_REF']
     const workflow = process.env['GITHUB_WORKFLOW']
@@ -119,28 +178,22 @@ export async function finish(): Promise<void> {
     const cachePaths: string[] = ['filelist.txt']
     const primaryKey = `${workflow}-${branch}-${commit}`
 
-    //TODO: end tracing and collect paths in filelist.txt
-
-    //TODO: Until we have tracing wired up, the used files are hard-coded.
-    let filesUsed = ''
-    if (fs.existsSync('main.rb')) {
-      filesUsed += 'main.rb\n'
-    }
-    if (fs.existsSync('Gemfile')) {
-      filesUsed += 'Gemfile\n'
-    }
-    if (fs.existsSync('Gemfile.lock')) {
-      filesUsed += 'Gemfile.lock\n'
-    }
-    fs.writeFileSync('filelist.txt', filesUsed)
-
     const cacheId = await cache.saveCache(cachePaths, primaryKey)
 
     if (cacheId !== -1) {
       core.info(`Cache saved with key: ${primaryKey}`)
     }
   } catch (error) {
-    // Fail the workflow run if an error occurs
-    if (error instanceof Error) core.setFailed(error.message)
+    if (error instanceof Error) core.warning(error)
+  }
+}
+
+export async function main(): Promise<void> {
+  if (!core.getState('isPost')) {
+    core.saveState('isPost', 'true')
+    await run()
+  } else {
+    await finish()
+    process.exit(0)
   }
 }

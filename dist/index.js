@@ -84321,51 +84321,6 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 6144:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-/**
- * The entrypoint for the action.
- */
-const main_1 = __nccwpck_require__(399);
-const core = __importStar(__nccwpck_require__(2186));
-if (!core.getState('isPost')) {
-    core.saveState('isPost', 'true');
-    void (0, main_1.run)();
-}
-else {
-    void (0, main_1.finish)().then(() => process.exit(0));
-}
-
-
-/***/ }),
-
 /***/ 399:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -84395,11 +84350,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.finish = exports.run = void 0;
+exports.main = void 0;
 const cache = __importStar(__nccwpck_require__(7799));
 const core = __importStar(__nccwpck_require__(2186));
 const fs = __importStar(__nccwpck_require__(7147));
 const github = __importStar(__nccwpck_require__(5438));
+const child_process = __importStar(__nccwpck_require__(2081));
+const TRACER_LOG_FILE = 'tracer.log';
 async function shouldSkip() {
     const commit = process.env['GITHUB_SHA'];
     const branch = process.env['GITHUB_REF'];
@@ -84457,7 +84414,26 @@ async function run() {
         }
         else {
             core.info('Running workflow');
-            //TODO: setup tracing
+            // WORKER_PID="$(ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1)"
+            const workerPid = child_process
+                .execSync(`ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1`)
+                .toString()
+                .trim();
+            core.info(`Runner PID: ${workerPid}`);
+            fs.closeSync(fs.openSync(TRACER_LOG_FILE, 'w'));
+            const p = child_process.spawn('/usr/bin/nohup', [
+                'sudo',
+                'strace',
+                '-f',
+                '-e',
+                'trace=open,openat',
+                '-o',
+                TRACER_LOG_FILE,
+                '-p',
+                `${workerPid}`
+            ], { stdio: 'ignore', detached: true });
+            core.saveState('tracerPid', p.pid);
+            p.unref();
         }
     }
     catch (error) {
@@ -84466,7 +84442,6 @@ async function run() {
             core.setFailed(error.message);
     }
 }
-exports.run = run;
 // Returns a pair of (set of changed files, whether any were added)
 async function getChangedFiles(base, head) {
     // use github rest api to get changed files
@@ -84492,36 +84467,63 @@ async function getChangedFiles(base, head) {
 }
 async function finish() {
     try {
+        const tracerPid = core.getState('tracerPid');
+        if (tracerPid) {
+            core.info(`Killing tracer process ${tracerPid}`);
+            child_process.execSync(`sudo kill ${parseInt(tracerPid, 10)}`);
+        }
+        else {
+            core.info('Tracer process not found: skipping');
+            return;
+        }
+        // cat./ tracer.log | grep $(pwd) | grep 'open' | cut - d "\"" - f2 | sort - u
+        let traceLogContents;
+        try {
+            traceLogContents = fs.readFileSync(TRACER_LOG_FILE).toString();
+        }
+        catch (err) {
+            core.info(`File not found: ${TRACER_LOG_FILE}`);
+            return;
+        }
+        core.info(`Trace log:\n${traceLogContents}`);
+        let filesUsed = '';
+        for (const line of traceLogContents.split('\n')) {
+            // TODO: deal with relative paths
+            if (line.includes(process.cwd())) {
+                // TODO: handle escape sequences
+                const file = line.split('"')[1];
+                core.info(`File used: ${file}`);
+                filesUsed += `${file}\n`;
+            }
+        }
+        fs.writeFileSync('filelist.txt', filesUsed);
+        core.info(`Files used: ${filesUsed}`);
         const commit = process.env['GITHUB_SHA'];
         const branch = process.env['GITHUB_REF'];
         const workflow = process.env['GITHUB_WORKFLOW'];
         const cachePaths = ['filelist.txt'];
         const primaryKey = `${workflow}-${branch}-${commit}`;
-        //TODO: end tracing and collect paths in filelist.txt
-        //TODO: Until we have tracing wired up, the used files are hard-coded.
-        let filesUsed = '';
-        if (fs.existsSync('main.rb')) {
-            filesUsed += 'main.rb\n';
-        }
-        if (fs.existsSync('Gemfile')) {
-            filesUsed += 'Gemfile\n';
-        }
-        if (fs.existsSync('Gemfile.lock')) {
-            filesUsed += 'Gemfile.lock\n';
-        }
-        fs.writeFileSync('filelist.txt', filesUsed);
         const cacheId = await cache.saveCache(cachePaths, primaryKey);
         if (cacheId !== -1) {
             core.info(`Cache saved with key: ${primaryKey}`);
         }
     }
     catch (error) {
-        // Fail the workflow run if an error occurs
         if (error instanceof Error)
-            core.setFailed(error.message);
+            core.warning(error);
     }
 }
-exports.finish = finish;
+async function main() {
+    if (!core.getState('isPost')) {
+        core.saveState('isPost', 'true');
+        await run();
+    }
+    else {
+        await finish();
+        process.exit(0);
+    }
+}
+exports.main = main;
 
 
 /***/ }),
@@ -86463,12 +86465,21 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(6144);
-/******/ 	module.exports = __webpack_exports__;
-/******/ 	
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+(() => {
+"use strict";
+var exports = __webpack_exports__;
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+/**
+ * The entrypoint for the action.
+ */
+const main_1 = __nccwpck_require__(399);
+(0, main_1.main)();
+
+})();
+
+module.exports = __webpack_exports__;
 /******/ })()
 ;
