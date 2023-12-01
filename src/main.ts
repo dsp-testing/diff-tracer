@@ -129,7 +129,7 @@ export async function finish(): Promise<void> {
     }
     fs.writeFileSync('filelist.txt', filesUsed)
 
-    const cacheId = await cache.saveCache(cachePaths, primaryKey, {}, false)
+    const cacheId = await cache.saveCache(cachePaths, primaryKey)
 
     if (cacheId !== -1) {
       core.info(`Cache saved with key: ${primaryKey}`)

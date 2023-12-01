@@ -84360,7 +84360,7 @@ if (!core.getState('isPost')) {
     void (0, main_1.run)();
 }
 else {
-    void (0, main_1.finish)();
+    void (0, main_1.finish)().then(() => process.exit(0));
 }
 
 
@@ -84506,7 +84506,7 @@ async function finish() {
             filesUsed += 'Gemfile.lock\n';
         }
         fs.writeFileSync('filelist.txt', filesUsed);
-        const cacheId = await cache.saveCache(cachePaths, primaryKey, {}, false);
+        const cacheId = await cache.saveCache(cachePaths, primaryKey);
         if (cacheId !== -1) {
             core.info(`Cache saved with key: ${primaryKey}`);
         }
