@@ -49,7 +49,9 @@ def main():
             if event.mask & flags.ISDIR or event.name == "":
                 # We don't care about directory events.
                 continue
-            fullname = str(os.path.normpath(os.path.join(dir_names[event.wd], event.name)))
+            fullname = str(
+                os.path.normpath(os.path.join(dir_names[event.wd], event.name))
+            )
             if fullname in files_seen:
                 # We don't care about duplicate events.
                 continue
