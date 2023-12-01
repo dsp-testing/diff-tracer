@@ -4,7 +4,6 @@ import * as fs from 'fs'
 import * as github from '@actions/github'
 import * as child_process from 'child_process'
 
-const TRACER_LOG_FILE = 'tracer.log'
 async function shouldSkip(): Promise<boolean> {
   const commit = process.env['GITHUB_SHA']
   const branch = process.env['GITHUB_REF']
@@ -77,29 +76,15 @@ async function run(): Promise<void> {
       core.info('Skipping workflow run')
     } else {
       core.info('Running workflow')
-      // WORKER_PID="$(ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1)"
-      const workerPid = child_process
-        .execSync(
-          `ps aux | grep "Runner.Worker" | tr -s ' ' | cut -f2 -d ' ' | head -n1`
-        )
-        .toString()
-        .trim()
-      core.info(`Runner PID: ${workerPid}`)
-      fs.closeSync(fs.openSync(TRACER_LOG_FILE, 'w'))
+      // Find the directory containing this script
+      const actionDir = __dirname
+      const tracerPath = `${actionDir}/../tools/inotify-tracer.py`
+      core.info(`Tracer path: ${tracerPath}`)
+      // Start the tracer, redirecting stdout to 'filelist.txt'
       const p = child_process.spawn(
         '/usr/bin/nohup',
-        [
-          'sudo',
-          'strace',
-          '-f',
-          '-e',
-          'trace=open,openat',
-          '-o',
-          TRACER_LOG_FILE,
-          '-p',
-          `${workerPid}`
-        ],
-        { stdio: 'ignore', detached: true }
+        [tracerPath, 'filelist.txt', '.'],
+        { stdio: 'inherit', detached: true }
       )
       core.saveState('tracerPid', p.pid)
       p.unref()
@@ -142,34 +127,14 @@ async function finish(): Promise<void> {
     const tracerPid = core.getState('tracerPid')
     if (tracerPid) {
       core.info(`Killing tracer process ${tracerPid}`)
-      child_process.execSync(`sudo kill ${parseInt(tracerPid, 10)}`)
+      process.kill(parseInt(tracerPid, 10))
     } else {
       core.info('Tracer process not found: skipping')
       return
     }
-    // cat./ tracer.log | grep $(pwd) | grep 'open' | cut - d "\"" - f2 | sort - u
-
-    let traceLogContents
-    try {
-      traceLogContents = fs.readFileSync(TRACER_LOG_FILE).toString()
-    } catch (err) {
-      core.info(`File not found: ${TRACER_LOG_FILE}`)
-      return
-    }
-    core.info(`Trace log:\n${traceLogContents}`)
-    let filesUsed = ''
-    for (const line of traceLogContents.split('\n')) {
-      // TODO: deal with relative paths
-      if (line.includes(process.cwd())) {
-        // TODO: handle escape sequences
-        const file = line.split('"')[1]
-        core.info(`File used: ${file}`)
-        filesUsed += `${file}\n`
-      }
-    }
-
-    fs.writeFileSync('filelist.txt', filesUsed)
-    core.info(`Files used: ${filesUsed}`)
+    // For debugging, print the contents of the filelist
+    const filesUsed = fs.readFileSync('filelist.txt').toString()
+    core.info(`Files used:\n${filesUsed}`)
 
     const commit = process.env['GITHUB_SHA']
     const branch = process.env['GITHUB_REF']
