@@ -84,7 +84,7 @@ async function run(): Promise<void> {
       const p = child_process.spawn(
         '/usr/bin/nohup',
         [tracerPath, 'filelist.txt', '.'],
-        { stdio: 'ignore', detached: true }
+        { stdio: 'inherit', detached: true }
       )
       core.saveState('tracerPid', p.pid)
       p.unref()

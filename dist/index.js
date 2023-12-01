@@ -84418,7 +84418,7 @@ async function run() {
             const tracerPath = __nccwpck_require__.ab + "inotify-tracer.py";
             core.info(`Tracer path: ${tracerPath}`);
             // Start the tracer, redirecting stdout to 'filelist.txt'
-            const p = child_process.spawn('/usr/bin/nohup', [__nccwpck_require__.ab + "inotify-tracer.py", 'filelist.txt', '.'], { stdio: 'ignore', detached: true });
+            const p = child_process.spawn('/usr/bin/nohup', [__nccwpck_require__.ab + "inotify-tracer.py", 'filelist.txt', '.'], { stdio: 'inherit', detached: true });
             core.saveState('tracerPid', p.pid);
             p.unref();
         }
