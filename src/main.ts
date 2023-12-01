@@ -88,7 +88,7 @@ async function run(): Promise<void> {
           'strace',
           '-f',
           '-e',
-          'trace=open,openat',
+          'trace=file',
           '-o',
           TRACER_LOG_FILE,
           '-p',

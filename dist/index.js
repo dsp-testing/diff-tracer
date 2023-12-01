@@ -84422,7 +84422,7 @@ async function run() {
                 'strace',
                 '-f',
                 '-e',
-                'trace=open,openat',
+                'trace=file',
                 '-o',
                 TRACER_LOG_FILE,
                 '-p',
