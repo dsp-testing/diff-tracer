@@ -4,6 +4,8 @@ import * as fs from 'fs'
 import * as github from '@actions/github'
 import * as child_process from 'child_process'
 
+const FILELIST_TXT = `${process.env['RUNNER_TEMP']}/filelist.txt`
+
 async function shouldSkip(): Promise<boolean> {
   const commit = process.env['GITHUB_SHA']
   const branch = process.env['GITHUB_REF']
@@ -21,7 +23,7 @@ async function shouldSkip(): Promise<boolean> {
     return false
   }
 
-  const cachePaths: string[] = ['filelist.txt']
+  const cachePaths: string[] = [FILELIST_TXT]
   const primaryKey = `${workflow}-${branch}-${commit}`
 
   // If an exact match can't be found, the cache action will try each of these
@@ -58,7 +60,7 @@ async function shouldSkip(): Promise<boolean> {
     return false
   }
   const usedFiles = new Set(
-    fs.readFileSync('filelist.txt').toString().split('\n')
+    fs.readFileSync(FILELIST_TXT).toString().split('\n')
   )
   for (const file of changedFiles) {
     if (usedFiles.has(file)) {
@@ -80,10 +82,10 @@ async function run(): Promise<void> {
       const actionDir = __dirname
       const tracerPath = `${actionDir}/../tools/inotify-tracer.py`
       core.info(`Tracer path: ${tracerPath}`)
-      // Start the tracer, redirecting stdout to 'filelist.txt'
+      // Start the tracer, redirecting stdout to FILELIST_TXT
       const p = child_process.spawn(
         '/usr/bin/nohup',
-        [tracerPath, 'filelist.txt', '.'],
+        [tracerPath, FILELIST_TXT, '.'],
         { stdio: 'inherit', detached: true }
       )
       core.saveState('tracerPid', p.pid)
@@ -133,14 +135,14 @@ async function finish(): Promise<void> {
       return
     }
     // For debugging, print the contents of the filelist
-    const filesUsed = fs.readFileSync('filelist.txt').toString()
+    const filesUsed = fs.readFileSync(FILELIST_TXT).toString()
     core.info(`Files used:\n${filesUsed}`)
 
     const commit = process.env['GITHUB_SHA']
     const branch = process.env['GITHUB_REF']
     const workflow = process.env['GITHUB_WORKFLOW']
 
-    const cachePaths: string[] = ['filelist.txt']
+    const cachePaths: string[] = [FILELIST_TXT]
     const primaryKey = `${workflow}-${branch}-${commit}`
 
     const cacheId = await cache.saveCache(cachePaths, primaryKey)
