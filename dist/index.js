@@ -84356,6 +84356,7 @@ const core = __importStar(__nccwpck_require__(2186));
 const fs = __importStar(__nccwpck_require__(7147));
 const github = __importStar(__nccwpck_require__(5438));
 const child_process = __importStar(__nccwpck_require__(2081));
+const FILELIST_TXT = `${process.env['RUNNER_TEMP']}/filelist.txt`;
 async function shouldSkip() {
     const commit = process.env['GITHUB_SHA'];
     const branch = process.env['GITHUB_REF'];
@@ -84372,7 +84373,7 @@ async function shouldSkip() {
         core.error('GITHUB_WORKFLOW is not defined');
         return false;
     }
-    const cachePaths = ['filelist.txt'];
+    const cachePaths = [FILELIST_TXT];
     const primaryKey = `${workflow}-${branch}-${commit}`;
     // If an exact match can't be found, the cache action will try each of these
     // fallbacks in order, picking the most recent entry if one exists. The
@@ -84396,7 +84397,7 @@ async function shouldSkip() {
     if (added) {
         return false;
     }
-    const usedFiles = new Set(fs.readFileSync('filelist.txt').toString().split('\n'));
+    const usedFiles = new Set(fs.readFileSync(FILELIST_TXT).toString().split('\n'));
     for (const file of changedFiles) {
         if (usedFiles.has(file)) {
             return false;
@@ -84417,8 +84418,8 @@ async function run() {
             const actionDir = __dirname;
             const tracerPath = __nccwpck_require__.ab + "inotify-tracer.py";
             core.info(`Tracer path: ${tracerPath}`);
-            // Start the tracer, redirecting stdout to 'filelist.txt'
-            const p = child_process.spawn('/usr/bin/nohup', [__nccwpck_require__.ab + "inotify-tracer.py", 'filelist.txt', '.'], { stdio: 'inherit', detached: true });
+            // Start the tracer, redirecting stdout to FILELIST_TXT
+            const p = child_process.spawn('/usr/bin/nohup', [__nccwpck_require__.ab + "inotify-tracer.py", FILELIST_TXT, '.'], { stdio: 'inherit', detached: true });
             core.saveState('tracerPid', p.pid);
             p.unref();
         }
@@ -84464,12 +84465,12 @@ async function finish() {
             return;
         }
         // For debugging, print the contents of the filelist
-        const filesUsed = fs.readFileSync('filelist.txt').toString();
+        const filesUsed = fs.readFileSync(FILELIST_TXT).toString();
         core.info(`Files used:\n${filesUsed}`);
         const commit = process.env['GITHUB_SHA'];
         const branch = process.env['GITHUB_REF'];
         const workflow = process.env['GITHUB_WORKFLOW'];
-        const cachePaths = ['filelist.txt'];
+        const cachePaths = [FILELIST_TXT];
         const primaryKey = `${workflow}-${branch}-${commit}`;
         const cacheId = await cache.saveCache(cachePaths, primaryKey);
         if (cacheId !== -1) {
