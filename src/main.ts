@@ -87,7 +87,7 @@ async function run(): Promise<void> {
       core.info(`Runner PID: ${workerPid}`)
       fs.closeSync(fs.openSync(TRACER_LOG_FILE, 'w'))
       const p = child_process
-        .execSync(
+        .exec(
           `/usr/bin/nohup sudo strace -f -e trace=open,openat -o ${TRACER_LOG_FILE} -p ${workerPid}`
       )
       core.saveState('tracerPid', p.pid)
