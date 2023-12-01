@@ -84418,7 +84418,11 @@ async function shouldSkip() {
     }
     const cachePaths = ['filelist.txt'];
     const primaryKey = `${workflow}-${branch}-${commit}`;
-    const restoreKeys = [`${workflow}-${branch}-`];
+    // If an exact match can't be found, the cache action will try each of these
+    // fallbacks in order, picking the most recent entry if one exists. The
+    // access control rules for the Actions cache service will ensure that
+    // unrelated branches are not mixed up.
+    const restoreKeys = [`${workflow}-${branch}-`, `${workflow}-`];
     const cacheKey = await cache.restoreCache(cachePaths, primaryKey, restoreKeys, { lookupOnly: false }, false);
     if (cacheKey) {
         core.info(`Cache restored with key: ${cacheKey}`);
