@@ -137,7 +137,7 @@ async function finish(): Promise<void> {
     const tracerPid = core.getState('tracerPid')
     if (tracerPid) {
       core.info(`Killing tracer process ${tracerPid}`)
-      child_process.execSync(`sudo kill ${tracerPid}`)
+      child_process.execSync(`sudo kill ${parseInt(tracerPid, 10)}`)
     } else {
       core.info('Tracer process not found: skipping')
       return
