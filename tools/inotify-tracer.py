@@ -12,7 +12,10 @@ def debug(*args, **kwargs):
 
 
 def main():
-    root = sys.argv[1]
+    output_filename = sys.argv[1]
+    root = sys.argv[2]
+
+    output_file = open(output_filename, "w")
 
     # We need to construct this list up front since adding new watches causes
     # events to be generated, and we don't want to see our own events.
@@ -46,12 +49,14 @@ def main():
             if event.mask & flags.ISDIR or event.name == "":
                 # We don't care about directory events.
                 continue
-            fullname = str(os.path.join(dir_names[event.wd], event.name))
+            fullname = str(os.path.normpath(os.path.join(dir_names[event.wd], event.name)))
             if fullname in files_seen:
                 # We don't care about duplicate events.
                 continue
+            # TODO: figure out how to deal with files that have newlines in
+            # their names
             files_seen.add(fullname)
-            print(fullname, flush=True)
+            print(fullname, flush=True, file=output_file)
 
 
 if __name__ == "__main__":
