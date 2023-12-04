@@ -6,7 +6,7 @@ This repository is the end result of the November 2023 hackathon to implement
 The original
 [design document](https://docs.google.com/document/d/1I134wAefXgpRy7SzC7SQT3Zj2PPTfNbR5wH4HXWlNao/edit#heading=h.msq7u3o3f8h6)
 
-# Project Idea
+## Project Idea
 
 The original design document was based around the idea of using `strace` to
 trace the GitHub runner process and track all files touched in the `_work`
@@ -20,7 +20,7 @@ therefor allowing us to establish if a new workflow run is required. If false,
 the workflow run is skipped and no new trace data is cached. If true, the
 workflow run continues and new trace data is cached.
 
-# Implementation
+## Implementation
 
 The current implementation (4 Dec 2023) is as follows:
 
@@ -55,12 +55,12 @@ indicating that the workflow can be skipped. This can help save resources by
 avoiding unnecessary workflow runs when the changes in the commit do not affect
 the outcome of the workflow.
 
-# Learnings
+## Learnings
 
 During the hackathon we had to make some changes to our implementation due to
 tool and service limitation.
 
-## Process tracing vs File tracing.
+### Process tracing vs File tracing
 
 The original idea was to use a process based tracing mechanism provide the file
 trace data to be used. It became clear there are some limitations. Process base
@@ -75,7 +75,7 @@ based tracing was relatively low. We also had difficulty in successfully tracing
 the processes in the workflow and did not investigate further once we pivoted to
 file based tracing.
 
-## Actions Cache.
+### Actions Cache limitations
 
 Our final hackathon version uses GitHub Actions Cache as our caching store. This
 has some limitations.
@@ -90,13 +90,13 @@ the PR, which allows checking PRs workflow runs, but does not allow main merges
 of the PR to get the cache of the PR workflow run, hence all PR merges into
 `main` would still require a full workflow run.
 
-## Networking
+### Networking dependencies
 
 The action does not monitor network interactions and workflows that depend on
 downloading dynamic data from the internet is not checked. This was considered
 during the design, but rejected due to limited time.
 
-## Operating Systems
+### Operating Systems
 
 During the development we investigated supporting Windows and macOS as both are
 also supported in GitHub Actions. Unfortunately we ran out of time to find
