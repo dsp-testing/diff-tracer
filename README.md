@@ -14,7 +14,7 @@ directory to create a list of all files used during a workflow run and save that
 trace data with a reference to the workflow, branch and commit information into
 a cache. The next time the workflow is triggered, we check the cache for the
 relevant trace data and compare it to the diff between the current workflow
-commit and the commit of the cached data. this will alow us to establish if any
+commit and the commit of the cached data. this will allow us to establish if any
 of the files used in the last workflow run has changed in the new commit,
 therefor allowing us to establish if a new workflow run is required. If false,
 the workflow run is skipped and no new trace data is cached. If true, the
@@ -62,13 +62,14 @@ tool and service limitation.
 
 ### Process tracing vs File tracing
 
-The original idea was to use a process based tracing mechanism provide the file
-trace data to be used. It became clear there are some limitations. Process base
-tracing used relative paths and would require more data like directory changes
-etc to be accurate. We also had to parse the output of the tracing tool. We
-investigated [fs_watch](https://emcrisostomo.github.io/fswatch/), which is
-cross-platform, but the overhead for using it recursively was too expensive. We
-opted for file base tracing using inotify instead.
+The original idea was to use a process based tracing mechanism based on `strace`
+to provide the file trace data to be used. It became clear there are some
+limitations. Process base tracing used relative paths and would require more
+data like directory changes etc to be accurate. We also had to parse the output
+of the tracing tool. We investigated
+[fs_watch](https://emcrisostomo.github.io/fswatch/), which is cross-platform,
+but the overhead for using it recursively was too expensive. We opted for file
+base tracing using `inotify` instead.
 
 During our testing process base tracing also incurred a high overhead while file
 based tracing was relatively low. We also had difficulty in successfully tracing
@@ -81,7 +82,7 @@ Our final hackathon version uses GitHub Actions Cache as our caching store. This
 has some limitations.
 
 There are
-[resitrction for accessing the cache](https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#restrictions-for-accessing-a-cache)
+[restrictions for accessing the cache](https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#restrictions-for-accessing-a-cache)
 which limited how we could use our action. Boundary restrictions between
 different branches or tags meant that workflow runs can restore caches created
 in either the current branch or the default branch, but not from from child
@@ -102,3 +103,24 @@ During the development we investigated supporting Windows and macOS as both are
 also supported in GitHub Actions. Unfortunately we ran out of time to find
 working solutions for process and/or filesystem based tracing for both
 platforms.
+
+## Future work
+
+- Windows and Mac support.
+- Improve the "tracer"
+- Raise the inotify directory count limit when needed (probably not on
+  self-hosted runners).
+- Have a fallback when we reach the inotify directory count limit. Should that
+  be strace or C library interception?
+- Handle inotify queue overflow (IN_Q_OVERFLOW).
+- The list of touched files should only contain files in the repo. Otherwise we
+  risk using unbounded space.
+- Deal with submodules, LFS, and similar.
+- Skip the git checkout step (Using the Pre mechanism in Actions to look at the
+  cache early, then start tracing only after the checkout step)
+- Use a more compact format for the list of used files. Ideas: only list files
+  that are in the repo, and store them as a Bloom filter.
+- Skip checks on the base branch right after a merge commit (assuming no files
+  changed). A workflow on main can't see the cache entries produced by PRs.
+- Clean up the code and address the TODOs in there.
+- Documentation.
