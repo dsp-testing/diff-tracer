@@ -113,13 +113,13 @@ platforms.
 - Have a fallback when we reach the inotify directory count limit. Should that
   be strace or C library interception?
 - Handle inotify queue overflow (IN_Q_OVERFLOW).
-- The list of touched files should only contain files in the repo. Otherwise we
-  risk using unbounded space.
+- The list of touched files should only contain files in the repository.
+  Otherwise we risk using unbounded space.
 - Deal with submodules, LFS, and similar.
 - Skip the git checkout step (Using the Pre mechanism in Actions to look at the
   cache early, then start tracing only after the checkout step)
 - Use a more compact format for the list of used files. Ideas: only list files
-  that are in the repo, and store them as a Bloom filter.
+  that are in the repository, and store them as a Bloom filter.
 - Skip checks on the base branch right after a merge commit (assuming no files
   changed). A workflow on main can't see the cache entries produced by PRs.
 - Clean up the code and address the TODOs in there.
