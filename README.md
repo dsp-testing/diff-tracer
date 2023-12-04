@@ -13,13 +13,13 @@ The current implementation (4 Dec 2023) is as follows:
 We created a GitHub Action that aims to optimize the execution of workflows by skipping unnecessary runs. It does this by leveraging the caching mechanism provided by GitHub Actions. The main function in this code is shouldSkip(), which determines whether the current workflow run should be skipped based on the changes made in the commit. Here's a high-level overview of how it works:
 
 * **Environment Variables**: It checks if the necessary environment variables (GITHUB_SHA, GITHUB_REF, GITHUB_WORKFLOW) are defined. If not, it logs an error and returns false, indicating the workflow should not be skipped.
-* **Cache Restoration**: It constructs a cache key from the workflow name, branch name, and commit SHA. It then attempts to restore the cache using this key. If the cache is not found, it returns false, indicating the workflow should not be skipped.
+* **Cache Restoration**: It constructs a cache key from the workflow name, branch name, and commit SHA. It then attempts to restore the cache using this key, falling back to the most recent entry from the largest prefix of the key components. If the cache is not found, it returns false, indicating the workflow should not be skipped.
 * **File Changes**: It extracts the previous commit SHA from the cache key and gets the list of files that have changed between the previous commit and the current commit. If any new files were added, it returns false, indicating the workflow should not be skipped.
 * **Used Files**: It reads the list of used files from a temporary file. If any of the changed files are in the used files list, it returns false, indicating the workflow should not be skipped.
 * **Running Workflow**: It sets up a file tracer using an inotify python script to track file access during a workflow run and saving the data to a file list.
 * **Cache Updating**: If the workflow run was successful, the file list is used to udpate the cache using the cache key.
 
-If none of the conditions for skipping are met, the function returns true, indicating that the workflow can be skipped. This can help save resources by avoiding unnecessary workflow runs when the changes in the commit do not affect the outcome of the workflow.
+If all of the conditions for skipping are met, the function returns true, indicating that the workflow can be skipped. This can help save resources by avoiding unnecessary workflow runs when the changes in the commit do not affect the outcome of the workflow.
 
 # Learnings 
 
@@ -38,7 +38,7 @@ There are [resitrction for accessing the cache](https://docs.github.com/en/actio
 
 ## Networking 
 
-The action does not monitor network interactions and workflows that depend on downloading dynamic data from the internet is not checked. This was considered during the design, but rejected due to limited time. this should likely be considered in some way. 
+The action does not monitor network interactions and workflows that depend on downloading dynamic data from the internet is not checked. This was considered during the design, but rejected due to limited time.
 
 ## Operating Systems
 
