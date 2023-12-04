@@ -1,6 +1,6 @@
 # Hackathon diff-tracer
 
-This repo is the end result of the November 2023 hackathon to implement [General purpose status checks management using execution tracing](https://github.com/github/code-scanning-hackathon/issues/128)
+This repository is the end result of the November 2023 hackathon to implement [General purpose status checks management using execution tracing](https://github.com/github/code-scanning-hackathon/issues/128)
 
 The original [design document](https://docs.google.com/document/d/1I134wAefXgpRy7SzC7SQT3Zj2PPTfNbR5wH4HXWlNao/edit#heading=h.msq7u3o3f8h6)
 
@@ -38,9 +38,9 @@ There are [resitrction for accessing the cache](https://docs.github.com/en/actio
 
 ## Networking 
 
-The action does not monitor network interactions and workflows that depend on downloading dynamic data from the Internet is not checked. This was considered during the design, but rejected due to limited time. this should likely be considered in some way. 
+The action does not monitor network interactions and workflows that depend on downloading dynamic data from the internet is not checked. This was considered during the design, but rejected due to limited time. this should likely be considered in some way. 
 
 ## Operating Systems
 
-During the development we investigated supporting Windows and MacOS as both are also supported in GitHub Actions. Unfortunately we ran out of time to find working solutions for process and/or filesystem based tracing for both platforms.
+During the development we investigated supporting Windows and macOS as both are also supported in GitHub Actions. Unfortunately we ran out of time to find working solutions for process and/or filesystem based tracing for both platforms.
 
