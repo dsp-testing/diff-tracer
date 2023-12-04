@@ -1,224 +1,130 @@
-# Create a GitHub Action Using TypeScript
+# Hackathon diff-tracer
 
-[![GitHub Super-Linter](https://github.com/actions/typescript-action/actions/workflows/linter.yml/badge.svg)](https://github.com/super-linter/super-linter)
-![CI](https://github.com/actions/typescript-action/actions/workflows/ci.yml/badge.svg)
-[![Check dist/](https://github.com/actions/typescript-action/actions/workflows/check-dist.yml/badge.svg)](https://github.com/actions/typescript-action/actions/workflows/check-dist.yml)
-[![CodeQL](https://github.com/actions/typescript-action/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/actions/typescript-action/actions/workflows/codeql-analysis.yml)
-[![Coverage](./badges/coverage.svg)](./badges/coverage.svg)
+This repository is the end result of the November 2023 hackathon to implement
+[General purpose status checks management using execution tracing](https://github.com/github/code-scanning-hackathon/issues/128)
 
-Use this template to bootstrap the creation of a TypeScript action. :rocket:
+The original
+[design document](https://docs.google.com/document/d/1I134wAefXgpRy7SzC7SQT3Zj2PPTfNbR5wH4HXWlNao/edit#heading=h.msq7u3o3f8h6)
 
-This template includes compilation support, tests, a validation workflow,
-publishing, and versioning guidance.
+## Name
 
-If you are new, there's also a simpler introduction in the
-[Hello world JavaScript action repository](https://github.com/actions/hello-world-javascript-action).
+This is a temporary name. A better name will come in time
 
-## Create Your Own Action
+## Project Idea
 
-To create your own action, you can use this repository as a template! Just
-follow the below instructions:
+The original design document was based around the idea of using `strace` to
+trace the GitHub runner process and track all files touched in the `_work`
+directory to create a list of all files used during a workflow run and save that
+trace data with a reference to the workflow, branch and commit information into
+a cache. The next time the workflow is triggered, we check the cache for the
+relevant trace data and compare it to the diff between the current workflow
+commit and the commit of the cached data. this will allow us to establish if any
+of the files used in the last workflow run has changed in the new commit,
+therefor allowing us to establish if a new workflow run is required. If false,
+the workflow run is skipped and no new trace data is cached. If true, the
+workflow run continues and new trace data is cached.
 
-1. Click the **Use this template** button at the top of the repository
-1. Select **Create a new repository**
-1. Select an owner and name for your new repository
-1. Click **Create repository**
-1. Clone your new repository
+## Implementation
 
-## Initial Setup
+The current implementation (4 Dec 2023) is as follows:
 
-After you've cloned the repository to your local machine or codespace, you'll
-need to perform some initial setup steps before you can develop your action.
+We created a GitHub Action that aims to optimize the execution of workflows by
+skipping unnecessary runs. It does this by leveraging the caching mechanism
+provided by GitHub Actions. The main function in this code is shouldSkip(),
+which determines whether the current workflow run should be skipped based on the
+changes made in the commit. Here's a high-level overview of how it works:
 
-> [!NOTE]
->
-> You'll need to have a reasonably modern version of
-> [Node.js](https://nodejs.org) handy (20.x or later should work!). If you are
-> using a version manager like [`nodenv`](https://github.com/nodenv/nodenv) or
-> [`nvm`](https://github.com/nvm-sh/nvm), this template has a `.node-version`
-> file at the root of the repository that will be used to automatically switch
-> to the correct version when you `cd` into the repository. Additionally, this
-> `.node-version` file is used by GitHub Actions in any `actions/setup-node`
-> actions.
+- **Environment Variables**: It checks if the necessary environment variables
+  (GITHUB_SHA, GITHUB_REF, GITHUB_WORKFLOW) are defined. If not, it logs an
+  error and returns false, indicating the workflow should not be skipped.
+- **Cache Restoration**: It constructs a cache key from the workflow name,
+  branch name, and commit SHA. It then attempts to restore the cache using this
+  key, falling back to the most recent entry from the largest prefix of the key
+  components. If the cache is not found, it returns false, indicating the
+  workflow should not be skipped.
+- **File Changes**: It extracts the previous commit SHA from the cache key and
+  gets the list of files that have changed between the previous commit and the
+  current commit. If any new files were added, it returns false, indicating the
+  workflow should not be skipped.
+- **Used Files**: It reads the list of used files from a temporary file. If any
+  of the changed files are in the used files list, it returns false, indicating
+  the workflow should not be skipped.
+- **Running Workflow**: It sets up a file tracer using an inotify python script
+  to track file access during a workflow run and saving the data to a file list.
+- **Cache Updating**: If the workflow run was successful, the file list is used
+  to udpate the cache using the cache key.
 
-1. :hammer_and_wrench: Install the dependencies
+If all of the conditions for skipping are met, the function returns true,
+indicating that the workflow can be skipped. This can help save resources by
+avoiding unnecessary workflow runs when the changes in the commit do not affect
+the outcome of the workflow.
 
-   ```bash
-   npm install
-   ```
+## Learnings
 
-1. :building_construction: Package the TypeScript for distribution
+During the hackathon we had to make some changes to our implementation due to
+tool and service limitation.
 
-   ```bash
-   npm run bundle
-   ```
+### Process tracing vs File tracing
 
-1. :white_check_mark: Run the tests
+The original idea was to use a process based tracing mechanism based on `strace`
+to provide the file trace data to be used. It became clear there are some
+limitations. Process base tracing used relative paths and would require more
+data like directory changes etc to be accurate. We also had to parse the output
+of the tracing tool. We investigated
+[fs_watch](https://emcrisostomo.github.io/fswatch/), which is cross-platform,
+but the overhead for using it recursively was too expensive. We opted for file
+base tracing using `inotify` instead.
 
-   ```bash
-   $ npm test
+During our testing process base tracing also incurred a high overhead while file
+based tracing was relatively low. We also had difficulty in successfully tracing
+the processes in the workflow and did not investigate further once we pivoted to
+file based tracing.
 
-   PASS  ./index.test.js
-     ✓ throws invalid number (3ms)
-     ✓ wait 500 ms (504ms)
-     ✓ test runs (95ms)
+### Actions Cache limitations
 
-   ...
-   ```
+Our final hackathon version uses GitHub Actions Cache as our caching store. This
+has some limitations.
 
-## Update the Action Metadata
+There are
+[restrictions for accessing the cache](https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#restrictions-for-accessing-a-cache)
+which limited how we could use our action. Boundary restrictions between
+different branches or tags meant that workflow runs can restore caches created
+in either the current branch or the default branch, but not from from child
+branches. This meant that PRs runs could get cached data from the `base_ref` of
+the PR, which allows checking PRs workflow runs, but does not allow main merges
+of the PR to get the cache of the PR workflow run, hence all PR merges into
+`main` would still require a full workflow run.
 
-The [`action.yml`](action.yml) file defines metadata about your action, such as
-input(s) and output(s). For details about this file, see
-[Metadata syntax for GitHub Actions](https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions).
+### Networking dependencies
 
-When you copy this repository, update `action.yml` with the name, description,
-inputs, and outputs for your action.
+The action does not monitor network interactions and workflows that depend on
+downloading dynamic data from the internet is not checked. This was considered
+during the design, but rejected due to limited time.
 
-## Update the Action Code
+### Operating Systems
 
-The [`src/`](./src/) directory is the heart of your action! This contains the
-source code that will be run when your action is invoked. You can replace the
-contents of this directory with your own code.
+During the development we investigated supporting Windows and macOS as both are
+also supported in GitHub Actions. Unfortunately we ran out of time to find
+working solutions for process and/or filesystem based tracing for both
+platforms.
 
-There are a few things to keep in mind when writing your action code:
+## Future work
 
-- Most GitHub Actions toolkit and CI/CD operations are processed asynchronously.
-  In `main.ts`, you will see that the action is run in an `async` function.
-
-  ```javascript
-  import * as core from '@actions/core'
-  //...
-
-  async function run() {
-    try {
-      //...
-    } catch (error) {
-      core.setFailed(error.message)
-    }
-  }
-  ```
-
-  For more information about the GitHub Actions toolkit, see the
-  [documentation](https://github.com/actions/toolkit/blob/master/README.md).
-
-So, what are you waiting for? Go ahead and start customizing your action!
-
-1. Create a new branch
-
-   ```bash
-   git checkout -b releases/v1
-   ```
-
-1. Replace the contents of `src/` with your action code
-1. Add tests to `__tests__/` for your source code
-1. Format, test, and build the action
-
-   ```bash
-   npm run all
-   ```
-
-   > [!WARNING]
-   >
-   > This step is important! It will run [`ncc`](https://github.com/vercel/ncc)
-   > to build the final JavaScript action code with all dependencies included.
-   > If you do not run this step, your action will not work correctly when it is
-   > used in a workflow. This step also includes the `--license` option for
-   > `ncc`, which will create a license file for all of the production node
-   > modules used in your project.
-
-1. Commit your changes
-
-   ```bash
-   git add .
-   git commit -m "My first action is ready!"
-   ```
-
-1. Push them to your repository
-
-   ```bash
-   git push -u origin releases/v1
-   ```
-
-1. Create a pull request and get feedback on your action
-1. Merge the pull request into the `main` branch
-
-Your action is now published! :rocket:
-
-For information about versioning your action, see
-[Versioning](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
-in the GitHub Actions toolkit.
-
-## Validate the Action
-
-You can now validate the action by referencing it in a workflow file. For
-example, [`ci.yml`](./.github/workflows/ci.yml) demonstrates how to reference an
-action in the same repository.
-
-```yaml
-steps:
-  - name: Checkout
-    id: checkout
-    uses: actions/checkout@v4
-
-  - name: Test Local Action
-    id: test-action
-    uses: ./
-    with:
-      milliseconds: 1000
-
-  - name: Print Output
-    id: output
-    run: echo "${{ steps.test-action.outputs.time }}"
-```
-
-For example workflow runs, check out the
-[Actions tab](https://github.com/actions/typescript-action/actions)! :rocket:
-
-## Usage
-
-After testing, you can create version tag(s) that developers can use to
-reference different stable versions of your action. For more information, see
-[Versioning](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
-in the GitHub Actions toolkit.
-
-To include the action in a workflow in another repository, you can use the
-`uses` syntax with the `@` symbol to reference a specific branch, tag, or commit
-hash.
-
-```yaml
-steps:
-  - name: Checkout
-    id: checkout
-    uses: actions/checkout@v4
-
-  - name: Test Local Action
-    id: test-action
-    uses: actions/typescript-action@v1 # Commit with the `v1` tag
-    with:
-      milliseconds: 1000
-
-  - name: Print Output
-    id: output
-    run: echo "${{ steps.test-action.outputs.time }}"
-```
-
-## Publishing a new release
-
-This project includes a helper script designed to streamline the process of
-tagging and pushing new releases for GitHub Actions.
-
-GitHub Actions allows users to select a specific version of the action to use,
-based on release tags. Our script simplifies this process by performing the
-following steps:
-
-1. **Retrieving the latest release tag:** The script starts by fetching the most
-   recent release tag by looking at the local data available in your repository.
-1. **Prompting for a new release tag:** The user is then prompted to enter a new
-   release tag. To assist with this, the script displays the latest release tag
-   and provides a regular expression to validate the format of the new tag.
-1. **Tagging the new release:** Once a valid new tag is entered, the script tags
-   the new release.
-1. **Pushing the new tag to the remote:** Finally, the script pushes the new tag
-   to the remote repository. From here, you will need to create a new release in
-   GitHub and users can easily reference the new tag in their workflows.
+- Windows and Mac support.
+- Improve the "tracer"
+- Raise the inotify directory count limit when needed (probably not on
+  self-hosted runners).
+- Have a fallback when we reach the inotify directory count limit. Should that
+  be strace or C library interception?
+- Handle inotify queue overflow (IN_Q_OVERFLOW).
+- The list of touched files should only contain files in the repository.
+  Otherwise we risk using unbounded space.
+- Deal with submodules, LFS, and similar.
+- Skip the git checkout step (Using the Pre mechanism in Actions to look at the
+  cache early, then start tracing only after the checkout step)
+- Use a more compact format for the list of used files. Ideas: only list files
+  that are in the repository, and store them as a Bloom filter.
+- Skip checks on the base branch right after a merge commit (assuming no files
+  changed). A workflow on main can't see the cache entries produced by PRs.
+- Clean up the code and address the TODOs in there.
+- Documentation.
