@@ -6,6 +6,10 @@ This repository is the end result of the November 2023 hackathon to implement
 The original
 [design document](https://docs.google.com/document/d/1I134wAefXgpRy7SzC7SQT3Zj2PPTfNbR5wH4HXWlNao/edit#heading=h.msq7u3o3f8h6)
 
+## Name
+
+This is a temporary name. A better name will come in time
+
 ## Project Idea
 
 The original design document was based around the idea of using `strace` to
