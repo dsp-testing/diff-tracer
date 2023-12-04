@@ -1,3 +1,5 @@
+Testing how quickly a SHA is GC'ed on github.com, take 2.
+
 # Create a GitHub Action Using TypeScript
 
 [![GitHub Super-Linter](https://github.com/actions/typescript-action/actions/workflows/linter.yml/badge.svg)](https://github.com/super-linter/super-linter)
